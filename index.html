@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Divide & Conquer</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #1a1a3e;
+    --sky2: #2d1b69;
+    --ground: #0f3d0f;
+    --grass: #1a5c1a;
+    --star: #ffe66d;
+    --hero: #4ecdc4;
+    --accent: #ff6b6b;
+    --accent2: #ffa552;
+    --purple: #a855f7;
+    --green: #22c55e;
+    --text: #f0e6ff;
+    --panel: rgba(255,255,255,0.07);
+    --panelborder: rgba(255,255,255,0.15);
+    --gold: #ffd700;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(180deg, var(--sky) 0%, var(--sky2) 60%, #1a0a3e 100%);
+    min-height: 100vh;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* Stars background */
+  .stars {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    overflow: hidden;
+  }
+  .star-dot {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle 3s infinite alternate;
+  }
+  @keyframes twinkle {
+    from { opacity: 0.2; transform: scale(1); }
+    to { opacity: 1; transform: scale(1.3); }
+  }
+
+  /* Floating clouds/shapes */
+  .deco-shape {
+    position: fixed; pointer-events: none; z-index: 0;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.15;
+  }
+
+  /* ====== SCREENS ====== */
+  .screen {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .screen.active { display: flex; }
+
+  /* ====== TITLE SCREEN ====== */
+  .title-logo {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .title-logo .sword-icon { font-size: 80px; animation: swordFloat 2s ease-in-out infinite; }
+  @keyframes swordFloat {
+    0%,100% { transform: translateY(0) rotate(-10deg); }
+    50% { transform: translateY(-15px) rotate(10deg); }
+  }
+  .title-logo h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(255,215,0,0.6), 3px 3px 0 #8B6914;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .title-logo .subtitle {
+    font-size: 1.1rem;
+    color: var(--accent2);
+    margin-top: 8px;
+    font-weight: 700;
+  }
+
+  .lang-select {
+    display: flex; gap: 12px; margin: 20px 0;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .lang-btn {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    color: var(--text);
+    padding: 10px 22px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .lang-btn:hover, .lang-btn.selected {
+    background: var(--gold);
+    color: #222;
+    border-color: var(--gold);
+    transform: scale(1.05);
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 520px;
+    margin-top: 10px;
+  }
+  .menu-card {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    border-radius: 20px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .menu-card:hover {
+    transform: translateY(-6px) scale(1.03);
+    border-color: var(--gold);
+    background: rgba(255,215,0,0.1);
+    box-shadow: 0 10px 30px rgba(255,215,0,0.2);
+  }
+  .menu-card .card-icon { font-size: 3rem; margin-bottom: 10px; }
+  .menu-card .card-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.3rem;
+    color: var(--gold);
+  }
+  .menu-card .card-desc {
+    font-size: 0.82rem;
+    opacity: 0.7;
+    margin-top: 4px;
+  }
+
+  .score-display {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    border-radius: 50px;
+    padding: 8px 24px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ====== LEARN SCREEN ====== */
+  .learn-container {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    border-radius: 24px;
+    padding: 30px;
+    max-width: 680px;
+    width: 100%;
+  }
+  .learn-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .learn-tabs {
+    display: flex; gap: 8px; margin-bottom: 24px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .learn-tab {
+    background: rgba(255,255,255,0.08);
+    border: 2px solid var(--panelborder);
+    color: var(--text);
+    padding: 8px 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .learn-tab.active {
+    background: var(--purple);
+    border-color: var(--purple);
+    color: #fff;
+  }
+  .learn-content-panel { display: none; }
+  .learn-content-panel.active { display: block; }
+
+  .visual-division {
+    text-align: center; margin: 16px 0;
+  }
+  .pizza-row {
+    display: flex; justify-content: center; gap: 6px;
+    flex-wrap: wrap; margin: 10px 0;
+  }
+  .pizza-slice {
+    font-size: 2.2rem;
+    transition: all 0.3s;
+    animation: popIn 0.3s ease;
+  }
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .group-box {
+    display: inline-flex; flex-wrap: wrap;
+    gap: 4px; padding: 8px 12px;
+    border-radius: 12px;
+    margin: 4px;
+    border: 2px dashed rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.05);
+    vertical-align: top;
+  }
+  .groups-row {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
+    margin: 12px 0;
+  }
+  .formula-display {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.2rem;
+    color: var(--gold);
+    margin: 16px 0;
+    text-align: center;
+  }
+  .formula-display span { color: var(--accent); }
+  .learn-text {
+    font-size: 1rem; line-height: 1.6;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .vocab-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 12px;
+  }
+  .vocab-card {
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 12px 14px;
+    border-left: 4px solid var(--purple);
+  }
+  .vocab-card .word {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: var(--purple);
+  }
+  .vocab-card .meaning { font-size: 0.85rem; opacity: 0.8; margin-top: 3px; }
+
+  .interactive-demo {
+    background: rgba(0,0,0,0.2);
+    border-radius: 16px; padding: 20px;
+    margin-top: 16px; text-align: center;
+  }
+  .demo-controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin: 12px 0; flex-wrap: wrap;
+  }
+  .demo-label { font-weight: 700; font-size: 0.9rem; opacity: 0.8; }
+  .demo-num {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem; color: var(--gold);
+    background: rgba(255,215,0,0.1);
+    border: 2px solid var(--gold);
+    border-radius: 12px; width: 60px; height: 60px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .demo-btn {
+    background: var(--purple);
+    border: none; color: #fff;
+    width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer;
+    font-size: 1.3rem; font-weight: 900;
+    transition: all 0.2s; line-height: 1;
+  }
+  .demo-btn:hover { transform: scale(1.15); background: #9333ea; }
+  .demo-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ====== GAME SCREEN ====== */
+  .game-header {
+    width: 100%; max-width: 720px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+  .game-stat {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    border-radius: 50px; padding: 8px 18px;
+    font-family: 'Fredoka One', cursive; font-size: 1.1rem;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .game-stat.gold-stat { border-color: var(--gold); color: var(--gold); }
+  .game-stat.red-stat { border-color: var(--accent); color: var(--accent); }
+  .game-stat.green-stat { border-color: var(--green); color: var(--green); }
+
+  .battle-arena {
+    width: 100%; max-width: 720px;
+    background: rgba(0,0,0,0.25);
+    border: 2px solid var(--panelborder);
+    border-radius: 24px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Monster */
+  .monster-area {
+    display: flex; flex-direction: column; align-items: center;
+    margin-bottom: 20px; position: relative;
+  }
+  .monster-name {
+    font-family: 'Fredoka One', cursive;
+    color: var(--accent);
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+  .monster-emoji {
+    font-size: clamp(4rem, 12vw, 7rem);
+    line-height: 1;
+    filter: drop-shadow(0 0 20px rgba(255,107,107,0.5));
+    transition: all 0.3s;
+  }
+  .monster-emoji.shake {
+    animation: monsterShake 0.5s ease;
+  }
+  .monster-emoji.die {
+    animation: monsterDie 0.7s ease forwards;
+  }
+  @keyframes monsterShake {
+    0%,100% { transform: translateX(0) rotate(0); }
+    20% { transform: translateX(-15px) rotate(-5deg); }
+    40% { transform: translateX(15px) rotate(5deg); }
+    60% { transform: translateX(-10px) rotate(-3deg); }
+    80% { transform: translateX(10px) rotate(3deg); }
+  }
+  @keyframes monsterDie {
+    0% { transform: scale(1) rotate(0); opacity: 1; }
+    50% { transform: scale(1.3) rotate(20deg); opacity: 0.5; filter: drop-shadow(0 0 40px #ff6b6b); }
+    100% { transform: scale(0) rotate(60deg); opacity: 0; }
+  }
+
+  .hp-bar-wrap {
+    width: 200px; height: 14px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50px; overflow: hidden;
+    margin-top: 8px;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  .hp-bar {
+    height: 100%; border-radius: 50px;
+    background: linear-gradient(90deg, #22c55e, #84cc16);
+    transition: width 0.5s ease, background 0.3s;
+  }
+  .hp-bar.low { background: linear-gradient(90deg, #ef4444, #f97316); }
+
+  /* Divison Problem */
+  .problem-panel {
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px; padding: 20px;
+    text-align: center; margin-bottom: 16px;
+  }
+  .problem-text {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    color: var(--text);
+    letter-spacing: 4px;
+    line-height: 1.1;
+  }
+  .problem-text .num { color: var(--gold); }
+  .problem-text .divider { color: var(--accent2); }
+  .problem-text .eq { color: var(--hero); }
+  .problem-text .blank {
+    display: inline-block;
+    width: 70px; height: 50px;
+    border-bottom: 4px solid var(--hero);
+    vertical-align: bottom;
+    position: relative;
+  }
+  .hint-row {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 6px;
+    margin-top: 10px; min-height: 44px;
+  }
+  .hint-dot {
+    font-size: 1.4rem;
+    animation: popIn 0.2s ease;
+  }
+
+  /* Answer buttons */
+  .answers-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin-top: 6px;
+  }
+  @media (max-width: 480px) {
+    .answers-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .ans-btn {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    color: var(--text);
+    padding: 14px 8px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem;
+    transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .ans-btn:hover:not(:disabled) {
+    transform: translateY(-4px) scale(1.05);
+    border-color: var(--hero);
+    background: rgba(78,205,196,0.15);
+    box-shadow: 0 8px 24px rgba(78,205,196,0.3);
+  }
+  .ans-btn.correct {
+    background: rgba(34,197,94,0.3);
+    border-color: var(--green);
+    color: var(--green);
+    animation: correctPulse 0.5s ease;
+  }
+  .ans-btn.wrong {
+    background: rgba(239,68,68,0.3);
+    border-color: var(--accent);
+    color: var(--accent);
+    animation: wrongShake 0.4s ease;
+  }
+  @keyframes correctPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); box-shadow: 0 0 30px rgba(34,197,94,0.6); }
+    100% { transform: scale(1); }
+  }
+  @keyframes wrongShake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  /* Hero character */
+  .hero-area {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 16px;
+  }
+  .hero-sprite {
+    font-size: 3rem;
+    filter: drop-shadow(0 0 12px rgba(78,205,196,0.6));
+    animation: heroIdle 2s ease-in-out infinite;
+  }
+  @keyframes heroIdle {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .hero-speech {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid var(--panelborder);
+    border-radius: 16px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    position: relative;
+    flex: 1;
+  }
+  .hero-speech::before {
+    content: '';
+    position: absolute; left: -12px; top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--panelborder);
+  }
+
+  /* Floating score popups */
+  .score-popup {
+    position: absolute;
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    pointer-events: none;
+    animation: scoreFloat 1.2s ease-out forwards;
+    z-index: 100;
+  }
+  .score-popup.positive { color: var(--gold); }
+  .score-popup.negative { color: var(--accent); }
+  @keyframes scoreFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1.4); }
+  }
+
+  /* Level up banner */
+  .level-banner {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg, var(--purple), #6366f1);
+    border: 3px solid var(--gold);
+    border-radius: 24px; padding: 30px 50px;
+    text-align: center; z-index: 200;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .level-banner.show { transform: translate(-50%, -50%) scale(1); }
+  .level-banner h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.5rem; color: var(--gold);
+  }
+  .level-banner p { font-size: 1rem; margin-top: 8px; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
+  .overlay.hide, .level-banner.hide { display: none; }
+
+  /* ====== LEADERBOARD ====== */
+  .lb-container {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    border-radius: 24px; padding: 30px;
+    max-width: 500px; width: 100%;
+  }
+  .lb-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem; color: var(--gold);
+    text-align: center; margin-bottom: 20px;
+  }
+  .lb-list { list-style: none; }
+  .lb-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: 12px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--panelborder);
+  }
+  .lb-item.first { background: rgba(255,215,0,0.1); border-color: var(--gold); }
+  .lb-item.second { background: rgba(192,192,192,0.1); border-color: #aaa; }
+  .lb-item.third { background: rgba(205,127,50,0.1); border-color: #cd7f32; }
+  .lb-rank {
+    font-family: 'Fredoka One', cursive; font-size: 1.5rem;
+    width: 36px; text-align: center;
+  }
+  .lb-name { flex: 1; font-weight: 700; }
+  .lb-score { font-family: 'Fredoka One', cursive; font-size: 1.3rem; color: var(--gold); }
+  .lb-empty { text-align: center; opacity: 0.5; font-style: italic; padding: 20px; }
+
+  .lb-form {
+    margin-top: 20px; display: flex; gap: 10px;
+  }
+  .lb-input {
+    flex: 1; background: rgba(255,255,255,0.08);
+    border: 2px solid var(--panelborder); color: var(--text);
+    padding: 10px 16px; border-radius: 50px;
+    font-family: 'Nunito', sans-serif; font-size: 1rem;
+    outline: none;
+  }
+  .lb-input:focus { border-color: var(--gold); }
+  .lb-input::placeholder { opacity: 0.5; }
+
+  /* ====== BUTTONS ====== */
+  .btn {
+    background: linear-gradient(135deg, var(--purple), #6366f1);
+    border: none; color: #fff;
+    padding: 12px 28px; border-radius: 50px;
+    cursor: pointer; font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem; transition: all 0.25s;
+    box-shadow: 0 4px 15px rgba(168,85,247,0.4);
+    text-decoration: none; display: inline-block;
+  }
+  .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(168,85,247,0.5); }
+  .btn.gold { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 15px rgba(245,158,11,0.4); }
+  .btn.gold:hover { box-shadow: 0 8px 25px rgba(245,158,11,0.5); }
+  .btn.red { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
+  .btn.green { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 4px 15px rgba(34,197,94,0.4); }
+  .btn.sm { padding: 8px 18px; font-size: 0.9rem; }
+  .btn-row { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+
+  /* Difficulty select */
+  .diff-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; width: 100%; max-width: 480px; margin: 16px 0;
+  }
+  .diff-card {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    border-radius: 16px; padding: 20px 12px;
+    text-align: center; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .diff-card:hover { transform: translateY(-4px); }
+  .diff-card.easy:hover, .diff-card.easy.selected { border-color: var(--green); background: rgba(34,197,94,0.1); }
+  .diff-card.medium:hover, .diff-card.medium.selected { border-color: var(--accent2); background: rgba(255,165,82,0.1); }
+  .diff-card.hard:hover, .diff-card.hard.selected { border-color: var(--accent); background: rgba(255,107,107,0.1); }
+  .diff-icon { font-size: 2rem; }
+  .diff-name { font-family: 'Fredoka One', cursive; font-size: 1.1rem; margin-top: 6px; }
+  .diff-desc { font-size: 0.78rem; opacity: 0.7; margin-top: 4px; }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%; background: rgba(255,255,255,0.1);
+    border-radius: 50px; height: 10px; overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 50px;
+    background: linear-gradient(90deg, var(--purple), var(--hero));
+    transition: width 0.4s ease;
+  }
+
+  /* Misc */
+  .back-btn {
+    position: fixed; top: 16px; left: 16px; z-index: 50;
+    background: var(--panel); border: 2px solid var(--panelborder);
+    color: var(--text); padding: 8px 18px; border-radius: 50px;
+    cursor: pointer; font-family: 'Nunito', sans-serif;
+    font-weight: 700; font-size: 0.9rem;
+    transition: all 0.2s; display: none; align-items: center; gap: 6px;
+  }
+  .back-btn.visible { display: flex; }
+  .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .section-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem; color: var(--gold);
+    text-align: center; margin-bottom: 16px;
+  }
+  .center { text-align: center; }
+  .mt { margin-top: 16px; }
+
+  /* Game over */
+  .gameover-container {
+    background: var(--panel);
+    border: 2px solid var(--panelborder);
+    border-radius: 24px; padding: 36px;
+    max-width: 480px; width: 100%;
+    text-align: center;
+  }
+  .gameover-icon { font-size: 5rem; }
+  .gameover-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.5rem; margin: 10px 0;
+  }
+  .gameover-score {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem; color: var(--gold);
+    margin: 10px 0;
+  }
+  .gameover-stats {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin: 16px 0;
+  }
+  .gstat {
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 12px;
+  }
+  .gstat-val {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem; color: var(--hero);
+  }
+  .gstat-label { font-size: 0.8rem; opacity: 0.7; }
+
+  /* Name input on gameover */
+  .name-input-row {
+    display: flex; gap: 10px; margin-top: 16px;
+  }
+  .name-input-row input {
+    flex: 1; background: rgba(255,255,255,0.08);
+    border: 2px solid var(--panelborder);
+    color: var(--text); padding: 10px 16px;
+    border-radius: 50px;
+    font-family: 'Nunito', sans-serif; font-size: 1rem; outline: none;
+  }
+  .name-input-row input:focus { border-color: var(--gold); }
+
+  /* Particles */
+  .particle {
+    position: fixed; pointer-events: none; z-index: 300;
+    font-size: 1.5rem;
+    animation: particleFly 1.5s ease-out forwards;
+  }
+  @keyframes particleFly {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-120px) scale(0.5) rotate(720deg); opacity: 0; }
+  }
+
+  /* Difficulty badge */
+  .diff-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;
+  }
+  .diff-badge.easy { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid var(--green); }
+  .diff-badge.medium { background: rgba(255,165,82,0.2); color: var(--accent2); border: 1px solid var(--accent2); }
+  .diff-badge.hard { background: rgba(255,107,107,0.2); color: var(--accent); border: 1px solid var(--accent); }
+
+  /* Animations for screen transitions */
+  @keyframes screenIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .screen.active > * { animation: screenIn 0.4s ease; }
+
+  /* Wave separator */
+  .wave {
+    width: 100%; height: 40px;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--hero) 100%);
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.15;
+    margin: 10px 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .menu-grid { grid-template-columns: 1fr 1fr; }
+    .diff-grid { grid-template-columns: 1fr; max-width: 220px; }
+    .vocab-grid { grid-template-columns: 1fr; }
+    .gameover-stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div class="stars" id="starsContainer"></div>
+
+<!-- Deco shapes -->
+<div class="deco-shape" style="width:400px;height:400px;background:#a855f7;top:-100px;right:-100px;"></div>
+<div class="deco-shape" style="width:300px;height:300px;background:#4ecdc4;bottom:100px;left:-80px;"></div>
+<div class="deco-shape" style="width:200px;height:200px;background:#ff6b6b;bottom:200px;right:50px;"></div>
+
+<!-- Back button -->
+<button class="back-btn" id="backBtn" onclick="goBack()">← <span id="backBtnText">Back</span></button>
+
+<!-- OVERLAY & LEVEL BANNER -->
+<div class="overlay hide" id="overlay" onclick="closeLevelBanner()"></div>
+<div class="level-banner hide" id="levelBanner">
+  <div style="font-size:3rem;">🌟</div>
+  <h2 id="levelBannerTitle">Level Up!</h2>
+  <p id="levelBannerMsg">You've reached Level 2!</p>
+  <button class="btn gold mt" onclick="closeLevelBanner()">Continue!</button>
+</div>
+
+<!-- ==================== TITLE SCREEN ==================== -->
+<div class="screen active" id="screen-title">
+  <div class="title-logo">
+    <div class="sword-icon">⚔️</div>
+    <h1>Divide &<br>Conquer</h1>
+    <div class="subtitle" id="titleSubtitle">Math Warriors vs. Monsters!</div>
+  </div>
+
+  <div class="lang-select">
+    <button class="lang-btn selected" onclick="setLang('en')" id="lang-en">🇬🇧 English</button>
+    <button class="lang-btn" onclick="setLang('hr')" id="lang-hr">🇭🇷 Hrvatski</button>
+    <button class="lang-btn" onclick="setLang('da')" id="lang-da">🇩🇰 Dansk</button>
+  </div>
+
+  <div class="score-display">
+    ⭐ <span id="titleTotalScore">0</span> <span id="titlePts">pts</span>
+  </div>
+
+  <div class="menu-grid">
+    <div class="menu-card" onclick="showScreen('screen-learn')">
+      <div class="card-icon">📚</div>
+      <div class="card-title" id="menuLearnTitle">Learn</div>
+      <div class="card-desc" id="menuLearnDesc">Discover how division works</div>
+    </div>
+    <div class="menu-card" onclick="showScreen('screen-diff')">
+      <div class="card-icon">⚔️</div>
+      <div class="card-title" id="menuBattleTitle">Battle</div>
+      <div class="card-desc" id="menuBattleDesc">Fight monsters with math!</div>
+    </div>
+    <div class="menu-card" onclick="showScreen('screen-leaderboard')">
+      <div class="card-icon">🏆</div>
+      <div class="card-title" id="menuLBTitle">Scores</div>
+      <div class="card-desc" id="menuLBDesc">See the best warriors</div>
+    </div>
+    <div class="menu-card" onclick="showScreen('screen-about')">
+      <div class="card-icon">❓</div>
+      <div class="card-title" id="menuAboutTitle">How to Play</div>
+      <div class="card-desc" id="menuAboutDesc">Learn the rules</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== LEARN SCREEN ==================== -->
+<div class="screen" id="screen-learn">
+  <div class="learn-container">
+    <div class="learn-title" id="learnTitle">📖 Learn Division</div>
+
+    <div class="learn-tabs">
+      <button class="learn-tab active" onclick="switchLearnTab('what', this)" id="tabWhat">What is it?</button>
+      <button class="learn-tab" onclick="switchLearnTab('how', this)" id="tabHow">How to divide</button>
+      <button class="learn-tab" onclick="switchLearnTab('try', this)" id="tabTry">Try it!</button>
+      <button class="learn-tab" onclick="switchLearnTab('vocab', this)" id="tabVocab">Key words</button>
+    </div>
+
+    <!-- WHAT IS DIVISION -->
+    <div class="learn-content-panel active" id="panel-what">
+      <p class="learn-text" id="learnWhatText1">Division is <strong>sharing things equally</strong> among groups! If you have 12 🍕 slices and want to share them with 4 friends, how many does each person get?</p>
+      <div class="visual-division">
+        <div class="pizza-row" id="pizzaRow"></div>
+        <div id="pizzaDivided" style="margin-top:12px; display:none;">
+          <div style="font-size:0.9rem; opacity:0.7; margin-bottom:6px;" id="friendsLabel">4 friends:</div>
+          <div class="groups-row" id="groupsRow"></div>
+        </div>
+        <button class="btn sm gold mt" onclick="showPizzaGroups()" id="btnSharePizza">Share them!</button>
+      </div>
+      <div class="formula-display">12 <span>÷</span> 4 <span>=</span> 3</div>
+      <p class="learn-text" id="learnWhatText2">Each friend gets <strong>3 slices</strong>! That's division! 🎉</p>
+    </div>
+
+    <!-- HOW TO DIVIDE -->
+    <div class="learn-content-panel" id="panel-how">
+      <p class="learn-text" id="learnHowText1">Think of division as the <strong>opposite of multiplication</strong>!</p>
+      <div style="background:rgba(0,0,0,0.2); border-radius:16px; padding:16px; margin:12px 0;">
+        <div class="formula-display" style="font-size:1.6rem; margin:8px 0;">
+          3 × 4 = 12<br>
+          12 <span>÷</span> 4 = 3<br>
+          12 <span>÷</span> 3 = 4
+        </div>
+      </div>
+      <p class="learn-text" id="learnHowText2">To solve <strong>20 ÷ 4</strong>, ask yourself: <em>"What times 4 equals 20?"</em></p>
+      <p class="learn-text" id="learnHowText3"><strong>5 × 4 = 20</strong>, so <strong>20 ÷ 4 = 5!</strong> ⚡</p>
+      <div class="progress-wrap" style="max-width:300px; margin:0 auto;">
+        <div class="progress-fill" style="width:75%;"></div>
+      </div>
+      <p class="center" style="font-size:0.8rem; opacity:0.6; margin-top:4px;" id="learnHowTip">Tip: Remember your multiplication tables!</p>
+    </div>
+
+    <!-- TRY IT -->
+    <div class="learn-content-panel" id="panel-try">
+      <p class="learn-text" id="learnTryText">Use the buttons to set up a division problem and see it visualized!</p>
+      <div class="interactive-demo">
+        <div class="demo-controls">
+          <div>
+            <div class="demo-label" id="demoTotalLabel">Total</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="demo-btn" onclick="changeDemo('total', -1)">−</button>
+              <div class="demo-num" id="demoTotal">12</div>
+              <button class="demo-btn" onclick="changeDemo('total', 1)">+</button>
+            </div>
+          </div>
+          <div style="font-family:'Fredoka One',cursive; font-size:2rem; color:var(--accent2);">÷</div>
+          <div>
+            <div class="demo-label" id="demoDivisorLabel">Groups</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="demo-btn" onclick="changeDemo('divisor', -1)">−</button>
+              <div class="demo-num" id="demoDivisor">3</div>
+              <button class="demo-btn" onclick="changeDemo('divisor', 1)">+</button>
+            </div>
+          </div>
+        </div>
+        <div id="demoFormula" class="formula-display" style="font-size:2rem;"></div>
+        <div class="groups-row" id="demoGroups" style="min-height:60px;"></div>
+        <div id="demoRemainder" style="color:var(--accent2); font-size:0.9rem; margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <!-- VOCAB -->
+    <div class="learn-content-panel" id="panel-vocab">
+      <p class="learn-text" id="learnVocabIntro">Important words to know:</p>
+      <div class="vocab-grid">
+        <div class="vocab-card">
+          <div class="word" id="vocabDividendWord">Dividend</div>
+          <div class="meaning" id="vocabDividendMeaning">The number being divided (the total)</div>
+          <div style="font-size:1.5rem; margin-top:6px; opacity:0.7;"><u>12</u> ÷ 3 = 4</div>
+        </div>
+        <div class="vocab-card">
+          <div class="word" id="vocabDivisorWord">Divisor</div>
+          <div class="meaning" id="vocabDivisorMeaning">The number you divide by</div>
+          <div style="font-size:1.5rem; margin-top:6px; opacity:0.7;">12 ÷ <u>3</u> = 4</div>
+        </div>
+        <div class="vocab-card">
+          <div class="word" id="vocabQuotientWord">Quotient</div>
+          <div class="meaning" id="vocabQuotientMeaning">The answer (result) of division</div>
+          <div style="font-size:1.5rem; margin-top:6px; opacity:0.7;">12 ÷ 3 = <u>4</u></div>
+        </div>
+        <div class="vocab-card">
+          <div class="word" id="vocabEqualWord">Equal sharing</div>
+          <div class="meaning" id="vocabEqualMeaning">Everyone gets the same amount</div>
+          <div style="font-size:1.5rem; margin-top:6px; opacity:0.7;">🎁 🎁 🎁 = 🎁 🎁 🎁</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn gold" onclick="showScreen('screen-diff')" id="btnReadyBattle">Ready to Battle? ⚔️</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DIFFICULTY SCREEN ==================== -->
+<div class="screen" id="screen-diff">
+  <div class="section-title" id="diffTitle">Choose Difficulty</div>
+  <div class="diff-grid">
+    <div class="diff-card easy" onclick="startGame('easy')" id="diffEasy">
+      <div class="diff-icon">🌱</div>
+      <div class="diff-name" id="diffEasyName">Easy</div>
+      <div class="diff-desc" id="diffEasyDesc">Division by 2, 3, 4<br>Numbers up to 20</div>
+    </div>
+    <div class="diff-card medium" onclick="startGame('medium')" id="diffMedium">
+      <div class="diff-icon">🔥</div>
+      <div class="diff-name" id="diffMedName">Medium</div>
+      <div class="diff-desc" id="diffMedDesc">Division by 2–6<br>Numbers up to 48</div>
+    </div>
+    <div class="diff-card hard" onclick="startGame('hard')" id="diffHard">
+      <div class="diff-icon">💀</div>
+      <div class="diff-name" id="diffHardName">Hard</div>
+      <div class="diff-desc" id="diffHardDesc">Division by 2–9<br>Numbers up to 81</div>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn" onclick="showScreen('screen-title')" id="btnBackFromDiff">← Back</button>
+  </div>
+</div>
+
+<!-- ==================== GAME SCREEN ==================== -->
+<div class="screen" id="screen-game">
+  <div class="game-header">
+    <div class="game-stat gold-stat">⭐ <span id="gameScore">0</span></div>
+    <div class="game-stat green-stat">❤️ <span id="gameLives">3</span></div>
+    <div class="game-stat red-stat">🏆 Lv.<span id="gameLevel">1</span></div>
+    <div id="gameDiffBadge" class="diff-badge easy">🌱 Easy</div>
+  </div>
+
+  <div class="progress-wrap" style="width:100%; max-width:720px; margin-bottom:12px;">
+    <div class="progress-fill" id="levelProgress" style="width:0%;"></div>
+  </div>
+
+  <div class="battle-arena" id="battleArena">
+    <!-- Monster -->
+    <div class="monster-area">
+      <div class="monster-name" id="monsterName">Slime King</div>
+      <div class="monster-emoji" id="monsterEmoji">🐉</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar" id="monsterHP" style="width:100%;"></div>
+      </div>
+      <div style="font-size:0.8rem; margin-top:4px; opacity:0.7;" id="monsterHPText">HP: 100/100</div>
+    </div>
+
+    <!-- Hero + speech -->
+    <div class="hero-area">
+      <div class="hero-sprite">🧙‍♂️</div>
+      <div class="hero-speech" id="heroSpeech">Defeat the monster by solving the division problem!</div>
+    </div>
+
+    <!-- Problem -->
+    <div class="problem-panel">
+      <div class="problem-text" id="problemDisplay"></div>
+      <div class="hint-row" id="hintRow"></div>
+    </div>
+
+    <!-- Answers -->
+    <div class="answers-grid" id="answersGrid"></div>
+  </div>
+</div>
+
+<!-- ==================== GAME OVER SCREEN ==================== -->
+<div class="screen" id="screen-gameover">
+  <div class="gameover-container">
+    <div class="gameover-icon" id="gameoverIcon">💀</div>
+    <div class="gameover-title" id="gameoverTitle">Game Over!</div>
+    <div class="gameover-score" id="gameoverScore">0 pts</div>
+
+    <div class="gameover-stats">
+      <div class="gstat">
+        <div class="gstat-val" id="goMonstersKilled">0</div>
+        <div class="gstat-label" id="goMonstersLabel">Monsters defeated</div>
+      </div>
+      <div class="gstat">
+        <div class="gstat-val" id="goCorrect">0</div>
+        <div class="gstat-label" id="goCorrectLabel">Correct answers</div>
+      </div>
+      <div class="gstat">
+        <div class="gstat-val" id="goWrong">0</div>
+        <div class="gstat-label" id="goWrongLabel">Wrong answers</div>
+      </div>
+      <div class="gstat">
+        <div class="gstat-val" id="goLevel">1</div>
+        <div class="gstat-label" id="goLevelLabel">Level reached</div>
+      </div>
+    </div>
+
+    <div class="name-input-row">
+      <input type="text" id="playerNameInput" maxlength="12" placeholder="Your name..." />
+      <button class="btn gold" onclick="saveScore()" id="btnSaveScore">💾 Save</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn green" onclick="showScreen('screen-diff')" id="btnPlayAgain">▶ Play Again</button>
+      <button class="btn" onclick="showScreen('screen-title')" id="btnGoHome">🏠 Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== LEADERBOARD SCREEN ==================== -->
+<div class="screen" id="screen-leaderboard">
+  <div class="lb-container">
+    <div class="lb-title" id="lbTitle">🏆 Hall of Fame</div>
+    <ul class="lb-list" id="lbList"></ul>
+  </div>
+  <div class="btn-row mt">
+    <button class="btn" onclick="showScreen('screen-title')" id="btnBackLB">← Back</button>
+    <button class="btn red sm" onclick="clearLeaderboard()" id="btnClearLB">🗑 Clear</button>
+  </div>
+</div>
+
+<!-- ==================== ABOUT SCREEN ==================== -->
+<div class="screen" id="screen-about">
+  <div class="learn-container">
+    <div class="learn-title" id="aboutTitle">❓ How to Play</div>
+    <div style="font-size:1rem; line-height:1.8;">
+      <p id="aboutP1">⚔️ <strong>Battle Mode:</strong> Monsters appear and you must solve division problems to defeat them!</p>
+      <br>
+      <p id="aboutP2">✅ <strong>Correct answer</strong> → You damage the monster and earn points!</p>
+      <br>
+      <p id="aboutP3">❌ <strong>Wrong answer</strong> → You lose a life! You have 3 lives per game.</p>
+      <br>
+      <p id="aboutP4">🎯 <strong>Level up</strong> by defeating enough monsters. Higher levels = harder problems but more points!</p>
+      <br>
+      <p id="aboutP5">📚 <strong>Learn Mode</strong> teaches you the concept of division before you battle.</p>
+      <br>
+      <p id="aboutP6">🏆 <strong>Save your score</strong> to the Hall of Fame after the game!</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="showScreen('screen-title')" id="btnBackAbout">← Back</button>
+      <button class="btn gold" onclick="showScreen('screen-diff')" id="btnAboutBattle">⚔️ Battle!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================================================
+// TRANSLATIONS
+// ===================================================
+const T = {
+  en: {
+    titleSubtitle: "Math Warriors vs. Monsters!",
+    titlePts: "pts",
+    menuLearnTitle: "Learn",
+    menuLearnDesc: "Discover how division works",
+    menuBattleTitle: "Battle",
+    menuBattleDesc: "Fight monsters with math!",
+    menuLBTitle: "Scores",
+    menuLBDesc: "See the best warriors",
+    menuAboutTitle: "How to Play",
+    menuAboutDesc: "Learn the rules",
+    learnTitle: "📖 Learn Division",
+    tabWhat: "What is it?",
+    tabHow: "How to divide",
+    tabTry: "Try it!",
+    tabVocab: "Key words",
+    learnWhatText1: "Division is <strong>sharing things equally</strong> among groups! If you have 12 🍕 slices and want to share them with 4 friends, how many does each person get?",
+    learnWhatText2: "Each friend gets <strong>3 slices</strong>! That's division! 🎉",
+    friendsLabel: "4 friends:",
+    btnSharePizza: "Share them!",
+    learnHowText1: "Think of division as the <strong>opposite of multiplication</strong>!",
+    learnHowText2: "To solve <strong>20 ÷ 4</strong>, ask yourself: <em>\"What times 4 equals 20?\"</em>",
+    learnHowText3: "<strong>5 × 4 = 20</strong>, so <strong>20 ÷ 4 = 5!</strong> ⚡",
+    learnHowTip: "Tip: Remember your multiplication tables!",
+    learnTryText: "Use the buttons to set up a division problem and see it visualized!",
+    demoTotalLabel: "Total",
+    demoDivisorLabel: "Groups",
+    learnVocabIntro: "Important words to know:",
+    vocabDividendWord: "Dividend",
+    vocabDividendMeaning: "The number being divided (the total)",
+    vocabDivisorWord: "Divisor",
+    vocabDivisorMeaning: "The number you divide by",
+    vocabQuotientWord: "Quotient",
+    vocabQuotientMeaning: "The answer (result) of division",
+    vocabEqualWord: "Equal sharing",
+    vocabEqualMeaning: "Everyone gets the same amount",
+    btnReadyBattle: "Ready to Battle? ⚔️",
+    diffTitle: "Choose Difficulty",
+    diffEasyName: "Easy",
+    diffEasyDesc: "Division by 2, 3, 4<br>Numbers up to 20",
+    diffMedName: "Medium",
+    diffMedDesc: "Division by 2–6<br>Numbers up to 48",
+    diffHardName: "Hard",
+    diffHardDesc: "Division by 2–9<br>Numbers up to 81",
+    btnBackFromDiff: "← Back",
+    lbTitle: "🏆 Hall of Fame",
+    btnBackLB: "← Back",
+    btnClearLB: "🗑 Clear",
+    lbEmpty: "No scores yet. Be the first!",
+    aboutTitle: "❓ How to Play",
+    aboutP1: "⚔️ <strong>Battle Mode:</strong> Monsters appear and you must solve division problems to defeat them!",
+    aboutP2: "✅ <strong>Correct answer</strong> → You damage the monster and earn points!",
+    aboutP3: "❌ <strong>Wrong answer</strong> → You lose a life! You have 3 lives per game.",
+    aboutP4: "🎯 <strong>Level up</strong> by defeating enough monsters. Higher levels = harder problems but more points!",
+    aboutP5: "📚 <strong>Learn Mode</strong> teaches you the concept of division before you battle.",
+    aboutP6: "🏆 <strong>Save your score</strong> to the Hall of Fame after the game!",
+    btnBackAbout: "← Back",
+    btnAboutBattle: "⚔️ Battle!",
+    goMonstersLabel: "Monsters defeated",
+    goCorrectLabel: "Correct answers",
+    goWrongLabel: "Wrong answers",
+    goLevelLabel: "Level reached",
+    btnSaveScore: "💾 Save",
+    btnPlayAgain: "▶ Play Again",
+    btnGoHome: "🏠 Home",
+    gameoverTitleWin: "Victory! 🏆",
+    gameoverTitleLose: "Defeated! 💀",
+    namePlaceholder: "Your name...",
+    heroPhrases: [
+      "Solve the problem to attack!",
+      "What's the answer?",
+      "Fight with your brain!",
+      "You can do it!",
+      "Think carefully...",
+      "Use your math power!"
+    ],
+    correctPhrases: [
+      "Great hit! 🎯",
+      "Excellent! ✨",
+      "Amazing! 🌟",
+      "That's right! 💥",
+      "Super! ⚡"
+    ],
+    wrongPhrases: [
+      "Oops! Try again!",
+      "Not quite! Stay focused!",
+      "Almost! Keep going!"
+    ],
+    levelUpMsg: "You've reached Level",
+    backBtn: "Back",
+    demoRemainder: "Remainder:",
+    demoEqually: "Cannot be divided equally",
+    monsters: ["Slime King","Cave Goblin","Dark Witch","Stone Troll","Shadow Wolf","Lava Drake","Ice Wraith","Thunder Ogre","Void Specter","Bone Dragon"],
+    diffBadges: { easy: "🌱 Easy", medium: "🔥 Medium", hard: "💀 Hard" },
+    savedMsg: "Score saved! 🏆",
+    confirmClear: "Clear all scores?"
+  },
+  hr: {
+    titleSubtitle: "Matematički ratnici vs. Čudovišta!",
+    titlePts: "bod.",
+    menuLearnTitle: "Učenje",
+    menuLearnDesc: "Otkrij kako dijeljenje funkcionira",
+    menuBattleTitle: "Bitka",
+    menuBattleDesc: "Bori se s matematikom!",
+    menuLBTitle: "Rezultati",
+    menuLBDesc: "Vidi najbolje ratnike",
+    menuAboutTitle: "Kako igrati",
+    menuAboutDesc: "Nauči pravila",
+    learnTitle: "📖 Nauči dijeljenje",
+    tabWhat: "Što je to?",
+    tabHow: "Kako dijeliti",
+    tabTry: "Pokušaj!",
+    tabVocab: "Ključne riječi",
+    learnWhatText1: "Dijeljenje je <strong>ravnomjerna podjela</strong> stvari! Ako imaš 12 🍕 komada pizze i dijeliš ih s 4 prijatelja, koliko svaki dobiva?",
+    learnWhatText2: "Svaki prijatelj dobiva <strong>3 komada</strong>! To je dijeljenje! 🎉",
+    friendsLabel: "4 prijatelja:",
+    btnSharePizza: "Podijeli!",
+    learnHowText1: "Dijeljenje je <strong>suprotno od množenja</strong>!",
+    learnHowText2: "Za rješavanje <strong>20 ÷ 4</strong>, pitaj se: <em>\"Što puta 4 jednako 20?\"</em>",
+    learnHowText3: "<strong>5 × 4 = 20</strong>, dakle <strong>20 ÷ 4 = 5!</strong> ⚡",
+    learnHowTip: "Savjet: Zapamti tablicu množenja!",
+    learnTryText: "Koristi gumbe za postavljanje zadatka dijeljenja i vizualizaciju!",
+    demoTotalLabel: "Ukupno",
+    demoDivisorLabel: "Grupe",
+    learnVocabIntro: "Važne riječi:",
+    vocabDividendWord: "Djeljenik",
+    vocabDividendMeaning: "Broj koji se dijeli (ukupno)",
+    vocabDivisorWord: "Djelitelj",
+    vocabDivisorMeaning: "Broj s kojim se dijeli",
+    vocabQuotientWord: "Količnik",
+    vocabQuotientMeaning: "Rezultat dijeljenja",
+    vocabEqualWord: "Jednaka podjela",
+    vocabEqualMeaning: "Svaki dobiva jednak dio",
+    btnReadyBattle: "Spreman za bitku? ⚔️",
+    diffTitle: "Odaberi težinu",
+    diffEasyName: "Lako",
+    diffEasyDesc: "Dijeljenje s 2, 3, 4<br>Brojevi do 20",
+    diffMedName: "Srednje",
+    diffMedDesc: "Dijeljenje s 2–6<br>Brojevi do 48",
+    diffHardName: "Teško",
+    diffHardDesc: "Dijeljenje s 2–9<br>Brojevi do 81",
+    btnBackFromDiff: "← Natrag",
+    lbTitle: "🏆 Dvorana slavnih",
+    btnBackLB: "← Natrag",
+    btnClearLB: "🗑 Obriši",
+    lbEmpty: "Još nema rezultata. Budi prvi!",
+    aboutTitle: "❓ Kako igrati",
+    aboutP1: "⚔️ <strong>Bitka:</strong> Pojavljuju se čudovišta i trebaš riješiti zadatke dijeljenja da ih pobijedis!",
+    aboutP2: "✅ <strong>Točan odgovor</strong> → Napadaš čudovište i zaraduješ bodove!",
+    aboutP3: "❌ <strong>Pogrešan odgovor</strong> → Gubiš jedan život! Imaš 3 života.",
+    aboutP4: "🎯 <strong>Prelazak razine</strong> pobjedom nad čudovištima. Viši razredi = teži zadaci, ali više bodova!",
+    aboutP5: "📚 <strong>Modo učenja</strong> uči te konceptu dijeljenja prije bitke.",
+    aboutP6: "🏆 <strong>Spremi rezultat</strong> u Dvoranu slavnih nakon igre!",
+    btnBackAbout: "← Natrag",
+    btnAboutBattle: "⚔️ Bitka!",
+    goMonstersLabel: "Poražena čudovišta",
+    goCorrectLabel: "Točni odgovori",
+    goWrongLabel: "Pogrešni odgovori",
+    goLevelLabel: "Dostignuta razina",
+    btnSaveScore: "💾 Spremi",
+    btnPlayAgain: "▶ Igraj opet",
+    btnGoHome: "🏠 Početak",
+    gameoverTitleWin: "Pobjeda! 🏆",
+    gameoverTitleLose: "Poražen! 💀",
+    namePlaceholder: "Tvoje ime...",
+    heroPhrases: [
+      "Riješi zadatak za napad!",
+      "Koji je odgovor?",
+      "Bori se mozgom!",
+      "Možeš to!",
+      "Pažljivo razmisli...",
+      "Iskoristi svoju matematičku moć!"
+    ],
+    correctPhrases: [
+      "Odličan pogodak! 🎯",
+      "Izvrsno! ✨",
+      "Sjajno! 🌟",
+      "Točno! 💥",
+      "Super! ⚡"
+    ],
+    wrongPhrases: [
+      "Ups! Pokušaj opet!",
+      "Nije točno! Usredotoči se!",
+      "Gotovo! Nastavi!"
+    ],
+    levelUpMsg: "Dostigao si razinu",
+    backBtn: "Natrag",
+    demoRemainder: "Ostatak:",
+    demoEqually: "Ne može se jednako podijeliti",
+    monsters: ["Kralj Sluz","Špilja Goblina","Mračna Vještica","Kameni Trol","Sjena Vuk","Lava Zmaj","Ledeni Duh","Gromovni Div","Tama Utvara","Kostani Zmaj"],
+    diffBadges: { easy: "🌱 Lako", medium: "🔥 Srednje", hard: "💀 Teško" },
+    savedMsg: "Rezultat spremljen! 🏆",
+    confirmClear: "Obrisati sve rezultate?"
+  },
+  da: {
+    titleSubtitle: "Matematik-krigere vs. Monstre!",
+    titlePts: "p.",
+    menuLearnTitle: "Lær",
+    menuLearnDesc: "Opdag hvordan division virker",
+    menuBattleTitle: "Kamp",
+    menuBattleDesc: "Kæmp mod monstre med matematik!",
+    menuLBTitle: "Resultater",
+    menuLBDesc: "Se de bedste krigere",
+    menuAboutTitle: "Sådan spiller du",
+    menuAboutDesc: "Lær reglerne",
+    learnTitle: "📖 Lær Division",
+    tabWhat: "Hvad er det?",
+    tabHow: "Sådan dividerer du",
+    tabTry: "Prøv det!",
+    tabVocab: "Nøgleord",
+    learnWhatText1: "Division er at <strong>dele ting ligeligt</strong> i grupper! Hvis du har 12 🍕 pizzastykker og vil dele dem med 4 venner, hvor mange får hver person?",
+    learnWhatText2: "Hver ven får <strong>3 stykker</strong>! Det er division! 🎉",
+    friendsLabel: "4 venner:",
+    btnSharePizza: "Del dem!",
+    learnHowText1: "Tænk på division som det <strong>modsatte af multiplikation</strong>!",
+    learnHowText2: "For at løse <strong>20 ÷ 4</strong>, spørg dig selv: <em>\"Hvad gange 4 er lig med 20?\"</em>",
+    learnHowText3: "<strong>5 × 4 = 20</strong>, så <strong>20 ÷ 4 = 5!</strong> ⚡",
+    learnHowTip: "Tip: Husk dine gangetabeller!",
+    learnTryText: "Brug knapperne til at opsætte et divisionsopgave og se det visualiseret!",
+    demoTotalLabel: "Total",
+    demoDivisorLabel: "Grupper",
+    learnVocabIntro: "Vigtige ord at kende:",
+    vocabDividendWord: "Dividend",
+    vocabDividendMeaning: "Tallet der divideres (totalen)",
+    vocabDivisorWord: "Divisor",
+    vocabDivisorMeaning: "Tallet du dividerer med",
+    vocabQuotientWord: "Kvotient",
+    vocabQuotientMeaning: "Svaret (resultatet) af division",
+    vocabEqualWord: "Ligelig deling",
+    vocabEqualMeaning: "Alle får det samme antal",
+    btnReadyBattle: "Klar til kamp? ⚔️",
+    diffTitle: "Vælg sværhedsgrad",
+    diffEasyName: "Let",
+    diffEasyDesc: "Division med 2, 3, 4<br>Tal op til 20",
+    diffMedName: "Mellem",
+    diffMedDesc: "Division med 2–6<br>Tal op til 48",
+    diffHardName: "Svær",
+    diffHardDesc: "Division med 2–9<br>Tal op til 81",
+    btnBackFromDiff: "← Tilbage",
+    lbTitle: "🏆 Hall of Fame",
+    btnBackLB: "← Tilbage",
+    btnClearLB: "🗑 Ryd",
+    lbEmpty: "Ingen resultater endnu. Vær den første!",
+    aboutTitle: "❓ Sådan spiller du",
+    aboutP1: "⚔️ <strong>Kamp:</strong> Monstre dukker op, og du skal løse divisionsproblemer for at besejre dem!",
+    aboutP2: "✅ <strong>Rigtigt svar</strong> → Du skader monstret og optjener point!",
+    aboutP3: "❌ <strong>Forkert svar</strong> → Du mister et liv! Du har 3 liv pr. spil.",
+    aboutP4: "🎯 <strong>Level op</strong> ved at besejre nok monstre. Højere niveauer = sværere problemer men flere point!",
+    aboutP5: "📚 <strong>Lær-tilstand</strong> lærer dig divisionens koncept, inden du kæmper.",
+    aboutP6: "🏆 <strong>Gem din score</strong> i Hall of Fame efter spillet!",
+    btnBackAbout: "← Tilbage",
+    btnAboutBattle: "⚔️ Kamp!",
+    goMonstersLabel: "Monstre besejret",
+    goCorrectLabel: "Rigtige svar",
+    goWrongLabel: "Forkerte svar",
+    goLevelLabel: "Nået niveau",
+    btnSaveScore: "💾 Gem",
+    btnPlayAgain: "▶ Spil igen",
+    btnGoHome: "🏠 Hjem",
+    gameoverTitleWin: "Sejr! 🏆",
+    gameoverTitleLose: "Besejret! 💀",
+    namePlaceholder: "Dit navn...",
+    heroPhrases: [
+      "Løs problemet for at angribe!",
+      "Hvad er svaret?",
+      "Kæmp med din hjerne!",
+      "Du kan gøre det!",
+      "Tænk omhyggeligt...",
+      "Brug din matematiske kraft!"
+    ],
+    correctPhrases: [
+      "Godt skud! 🎯",
+      "Fremragende! ✨",
+      "Fantastisk! 🌟",
+      "Rigtigt! 💥",
+      "Super! ⚡"
+    ],
+    wrongPhrases: [
+      "Ups! Prøv igen!",
+      "Ikke helt! Hold fokus!",
+      "Næsten! Fortsæt!"
+    ],
+    levelUpMsg: "Du har nået niveau",
+    backBtn: "Tilbage",
+    demoRemainder: "Rest:",
+    demoEqually: "Kan ikke divideres ligeligt",
+    monsters: ["Slim Kongen","Hule Goblin","Mørk Heks","Sten Trold","Skygge Ulv","Lava Drage","Is Genfærd","Torden Oger","Tomrum Spøgelse","Knogle Drage"],
+    diffBadges: { easy: "🌱 Let", medium: "🔥 Mellem", hard: "💀 Svær" },
+    savedMsg: "Score gemt! 🏆",
+    confirmClear: "Ryd alle resultater?"
+  }
+};
+
+// ===================================================
+// STATE
+// ===================================================
+let currentLang = 'en';
+let currentScreen = 'screen-title';
+let prevScreen = 'screen-title';
+let gameState = null;
+let demoState = { total: 12, divisor: 3 };
+let pizzaShown = false;
+
+// ===================================================
+// STARS INIT
+// ===================================================
+(function initStars() {
+  const c = document.getElementById('starsContainer');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star-dot';
+    const size = Math.random() * 3 + 1;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}%;
+      left:${Math.random()*100}%;
+      animation-delay:${Math.random()*3}s;
+      animation-duration:${2+Math.random()*3}s;
+    `;
+    c.appendChild(s);
+  }
+})();
+
+// ===================================================
+// LANGUAGE
+// ===================================================
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('lang-'+lang).classList.add('selected');
+  applyTranslations();
+}
+
+function t(key) {
+  return T[currentLang][key] || T['en'][key] || key;
+}
+
+function applyTranslations() {
+  const keys = [
+    'titleSubtitle','titlePts','menuLearnTitle','menuLearnDesc','menuBattleTitle','menuBattleDesc',
+    'menuLBTitle','menuLBDesc','menuAboutTitle','menuAboutDesc','learnTitle',
+    'tabWhat','tabHow','tabTry','tabVocab','learnWhatText1','learnWhatText2',
+    'friendsLabel','btnSharePizza','learnHowText1','learnHowText2','learnHowText3','learnHowTip',
+    'learnTryText','demoTotalLabel','demoDivisorLabel','learnVocabIntro',
+    'vocabDividendWord','vocabDividendMeaning','vocabDivisorWord','vocabDivisorMeaning',
+    'vocabQuotientWord','vocabQuotientMeaning','vocabEqualWord','vocabEqualMeaning',
+    'btnReadyBattle','diffTitle','diffEasyName','diffEasyDesc','diffMedName','diffMedDesc',
+    'diffHardName','diffHardDesc','btnBackFromDiff','lbTitle','btnBackLB','btnClearLB',
+    'aboutTitle','aboutP1','aboutP2','aboutP3','aboutP4','aboutP5','aboutP6',
+    'btnBackAbout','btnAboutBattle','btnSaveScore','btnPlayAgain','btnGoHome','backBtn'
+  ];
+  keys.forEach(k => {
+    const el = document.getElementById(k);
+    if (el) el.innerHTML = t(k);
+  });
+  // Update score display
+  updateTitleScore();
+  // Update placeholder
+  const ni = document.getElementById('playerNameInput');
+  if (ni) ni.placeholder = t('namePlaceholder');
+  // Refresh leaderboard if visible
+  if (currentScreen === 'screen-leaderboard') renderLeaderboard();
+  // Refresh demo if visible
+  if (currentScreen === 'screen-learn') updateDemo();
+  // Back button
+  document.getElementById('backBtnText').textContent = t('backBtn');
+}
+
+// ===================================================
+// SCREEN NAVIGATION
+// ===================================================
+function showScreen(id) {
+  prevScreen = currentScreen;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  currentScreen = id;
+
+  // Back button visibility
+  const noBack = ['screen-title'];
+  const backBtn = document.getElementById('backBtn');
+  if (noBack.includes(id)) {
+    backBtn.classList.remove('visible');
+  } else {
+    backBtn.classList.add('visible');
+  }
+
+  // Screen specific init
+  if (id === 'screen-learn') {
+    initLearnScreen();
+  }
+  if (id === 'screen-leaderboard') {
+    renderLeaderboard();
+  }
+  if (id === 'screen-title') {
+    updateTitleScore();
+    backBtn.classList.remove('visible');
+  }
+}
+
+function goBack() {
+  if (currentScreen === 'screen-game') {
+    if (confirm('Quit current game?')) {
+      showScreen('screen-title');
+    }
+  } else {
+    showScreen('screen-title');
+  }
+}
+
+// ===================================================
+// LEARN SCREEN
+// ===================================================
+function initLearnScreen() {
+  pizzaShown = false;
+  const pizzaRow = document.getElementById('pizzaRow');
+  const grouped = document.getElementById('pizzaDivided');
+  pizzaRow.innerHTML = '';
+  grouped.style.display = 'none';
+  document.getElementById('btnSharePizza').style.display = 'inline-block';
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('span');
+    s.className = 'pizza-slice';
+    s.textContent = '🍕';
+    s.style.animationDelay = (i * 0.05) + 's';
+    pizzaRow.appendChild(s);
+  }
+  updateDemo();
+}
+
+function switchLearnTab(tab, el) {
+  document.querySelectorAll('.learn-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.learn-content-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab === 'try') updateDemo();
+}
+
+function showPizzaGroups() {
+  if (pizzaShown) return;
+  pizzaShown = true;
+  document.getElementById('btnSharePizza').style.display = 'none';
+  const grouped = document.getElementById('pizzaDivided');
+  grouped.style.display = 'block';
+  document.getElementById('friendsLabel').innerHTML = t('friendsLabel');
+  const groupsRow = document.getElementById('groupsRow');
+  groupsRow.innerHTML = '';
+  for (let g = 0; g < 4; g++) {
+    const box = document.createElement('div');
+    box.className = 'group-box';
+    for (let i = 0; i < 3; i++) {
+      const s = document.createElement('span');
+      s.className = 'pizza-slice';
+      s.style.animationDelay = (g * 0.15 + i * 0.05) + 's';
+      s.textContent = '🍕';
+      box.appendChild(s);
+    }
+    groupsRow.appendChild(box);
+  }
+}
+
+function changeDemo(type, delta) {
+  if (type === 'total') {
+    demoState.total = Math.max(1, Math.min(50, demoState.total + delta));
+  } else {
+    demoState.divisor = Math.max(1, Math.min(10, demoState.divisor + delta));
+  }
+  updateDemo();
+}
+
+function updateDemo() {
+  const { total, divisor } = demoState;
+  document.getElementById('demoTotal').textContent = total;
+  document.getElementById('demoDivisor').textContent = divisor;
+  const demoGroups = document.getElementById('demoGroups');
+  const demoFormula = document.getElementById('demoFormula');
+  const demoRemainder = document.getElementById('demoRemainder');
+
+  const quotient = Math.floor(total / divisor);
+  const remainder = total % divisor;
+
+  demoFormula.innerHTML = `<span style="color:var(--gold)">${total}</span> <span style="color:var(--accent2)">÷</span> <span style="color:var(--gold)">${divisor}</span> <span style="color:var(--hero)">=</span> <span style="color:var(--green)">${quotient}</span>${remainder > 0 ? `<span style="color:var(--accent2)"> R${remainder}</span>` : ''}`;
+
+  demoGroups.innerHTML = '';
+  if (quotient === 0 && remainder > 0) {
+    demoRemainder.textContent = t('demoEqually');
+    return;
+  }
+
+  const emojis = ['⭐','🍎','🎁','🔵','🌸','🎈','🍬','🏆'];
+  const emoji = emojis[divisor % emojis.length];
+  for (let g = 0; g < divisor; g++) {
+    const box = document.createElement('div');
+    box.className = 'group-box';
+    box.style.border = `2px dashed hsl(${g*40},70%,60%)`;
+    for (let i = 0; i < quotient; i++) {
+      const s = document.createElement('span');
+      s.style.fontSize = '1.2rem';
+      s.textContent = emoji;
+      box.appendChild(s);
+    }
+    demoGroups.appendChild(box);
+  }
+
+  if (remainder > 0) {
+    demoRemainder.innerHTML = `<span>${t('demoRemainder')} ${remainder}</span>`;
+  } else {
+    demoRemainder.textContent = '';
+  }
+
+  document.getElementById('demoTotalLabel').textContent = t('demoTotalLabel');
+  document.getElementById('demoDivisorLabel').textContent = t('demoDivisorLabel');
+}
+
+// ===================================================
+// GAME ENGINE
+// ===================================================
+const MONSTERS = {
+  easy: [
+    { name: 0, emoji: '🐛', hp: 2, reward: 10 },
+    { name: 1, emoji: '👾', hp: 2, reward: 12 },
+    { name: 2, emoji: '🐸', hp: 3, reward: 15 },
+  ],
+  medium: [
+    { name: 3, emoji: '👹', hp: 3, reward: 20 },
+    { name: 4, emoji: '🐺', hp: 4, reward: 25 },
+    { name: 5, emoji: '🦎', hp: 4, reward: 28 },
+  ],
+  hard: [
+    { name: 6, emoji: '👁️', hp: 4, reward: 35 },
+    { name: 7, emoji: '🦷', hp: 5, reward: 40 },
+    { name: 8, emoji: '💀', hp: 5, reward: 45 },
+    { name: 9, emoji: '🐉', hp: 6, reward: 60 },
+  ]
+};
+
+const DIFF_CONFIG = {
+  easy:   { divisors: [2,3,4],     maxDividend: 20, answerRange: 5 },
+  medium: { divisors: [2,3,4,5,6], maxDividend: 48, answerRange: 4 },
+  hard:   { divisors: [2,3,4,5,6,7,8,9], maxDividend: 81, answerRange: 3 }
+};
+
+const MONSTERS_PER_LEVEL = 3;
+const POINTS_CORRECT_BONUS_PER_LEVEL = 5;
+
+function startGame(difficulty) {
+  const cfg = DIFF_CONFIG[difficulty];
+  gameState = {
+    difficulty,
+    score: 0,
+    lives: 3,
+    level: 1,
+    monstersKilled: 0,
+    monstersThisLevel: 0,
+    correctCount: 0,
+    wrongCount: 0,
+    currentMonster: null,
+    monsterMaxHP: 0,
+    monsterCurrentHP: 0,
+    blocked: false,
+    cfg
+  };
+
+  // Update badge
+  document.getElementById('gameDiffBadge').className = 'diff-badge ' + difficulty;
+  document.getElementById('gameDiffBadge').textContent = t('diffBadges')[difficulty];
+
+  showScreen('screen-game');
+  updateGameUI();
+  spawnMonster();
+}
+
+function getMonsterPool(difficulty, level) {
+  const pool = MONSTERS[difficulty];
+  // Higher level = later monsters
+  const idx = Math.min(Math.floor((level - 1) / 2), pool.length - 1);
+  return pool[idx];
+}
+
+function spawnMonster() {
+  const { difficulty, level } = gameState;
+  const base = getMonsterPool(difficulty, level);
+
+  // Scale HP and reward with level
+  const hpBonus = Math.floor((level - 1) / 2);
+  const hp = base.hp + hpBonus;
+  const reward = base.reward + (level - 1) * POINTS_CORRECT_BONUS_PER_LEVEL;
+
+  gameState.currentMonster = { ...base, hp, reward };
+  gameState.monsterMaxHP = hp;
+  gameState.monsterCurrentHP = hp;
+
+  const nameList = T[currentLang].monsters;
+  document.getElementById('monsterName').textContent = nameList[base.name];
+
+  const emojiEl = document.getElementById('monsterEmoji');
+  emojiEl.textContent = base.emoji;
+  emojiEl.classList.remove('shake', 'die');
+
+  updateMonsterHP();
+  generateQuestion();
+}
+
+function updateMonsterHP() {
+  const { monsterCurrentHP, monsterMaxHP } = gameState;
+  const pct = (monsterCurrentHP / monsterMaxHP) * 100;
+  const bar = document.getElementById('monsterHP');
+  bar.style.width = pct + '%';
+  bar.className = 'hp-bar' + (pct < 35 ? ' low' : '');
+  document.getElementById('monsterHPText').textContent = `HP: ${monsterCurrentHP}/${monsterMaxHP}`;
+}
+
+function updateGameUI() {
+  document.getElementById('gameScore').textContent = gameState.score;
+  document.getElementById('gameLives').textContent = '❤️'.repeat(gameState.lives);
+  document.getElementById('gameLevel').textContent = gameState.level;
+  document.getElementById('levelProgress').style.width =
+    ((gameState.monstersThisLevel / MONSTERS_PER_LEVEL) * 100) + '%';
+}
+
+function generateQuestion() {
+  const { cfg, level } = gameState;
+  const divisors = cfg.divisors;
+  const divisor = divisors[Math.floor(Math.random() * divisors.length)];
+  // Max quotient grows with level
+  const maxQ = Math.min(Math.floor(cfg.maxDividend / divisor), 5 + level);
+  const quotient = Math.floor(Math.random() * maxQ) + 1;
+  const dividend = divisor * quotient;
+
+  gameState.currentQuestion = { dividend, divisor, answer: quotient };
+
+  // Display problem
+  document.getElementById('problemDisplay').innerHTML =
+    `<span class="num">${dividend}</span> <span class="divider">÷</span> <span class="num">${divisor}</span> <span class="eq">=</span> <span class="blank"></span>`;
+
+  // Hint dots (for easy: show dots)
+  const hintRow = document.getElementById('hintRow');
+  hintRow.innerHTML = '';
+  if (gameState.difficulty === 'easy' && dividend <= 20) {
+    for (let i = 0; i < dividend; i++) {
+      const d = document.createElement('span');
+      d.className = 'hint-dot';
+      d.textContent = '•';
+      d.style.color = `hsl(${i * (360/dividend)}, 80%, 65%)`;
+      d.style.animationDelay = (i * 0.03) + 's';
+      hintRow.appendChild(d);
+    }
+  }
+
+  // Generate answer choices
+  generateAnswers(quotient, divisor);
+
+  // Hero speech
+  const phrases = T[currentLang].heroPhrases;
+  document.getElementById('heroSpeech').textContent =
+    phrases[Math.floor(Math.random() * phrases.length)];
+}
+
+function generateAnswers(correct, divisor) {
+  const grid = document.getElementById('answersGrid');
+  grid.innerHTML = '';
+
+  const wrong = new Set();
+  wrong.add(correct);
+
+  // Generate plausible wrong answers
+  let attempts = 0;
+  while (wrong.size < 4 && attempts < 50) {
+    attempts++;
+    let w;
+    const r = Math.random();
+    if (r < 0.3) w = correct + Math.floor(Math.random() * 3) + 1;
+    else if (r < 0.6) w = Math.max(1, correct - Math.floor(Math.random() * 3) - 1);
+    else w = Math.floor(Math.random() * 10) + 1;
+    if (w > 0 && w !== correct) wrong.add(w);
+  }
+
+  const options = shuffle([...wrong]);
+  options.forEach(val => {
+    const btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.textContent = val;
+    btn.onclick = () => checkAnswer(val, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function checkAnswer(val, btn) {
+  if (gameState.blocked) return;
+  gameState.blocked = true;
+
+  const { answer } = gameState.currentQuestion;
+  const isCorrect = val === answer;
+
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+
+  if (isCorrect) {
+    // Damage monster
+    gameState.monsterCurrentHP--;
+    gameState.score += gameState.currentMonster.reward;
+    gameState.correctCount++;
+    updateMonsterHP();
+    updateGameUI();
+
+    // Shake monster
+    document.getElementById('monsterEmoji').classList.add('shake');
+    setTimeout(() => document.getElementById('monsterEmoji').classList.remove('shake'), 600);
+
+    // Show score popup
+    showPopup(`+${gameState.currentMonster.reward}`, 'positive');
+
+    // Particles
+    spawnParticles(['⭐','✨','💥','🌟'], 8);
+
+    // Hero speech
+    const phrases = T[currentLang].correctPhrases;
+    document.getElementById('heroSpeech').textContent =
+      phrases[Math.floor(Math.random() * phrases.length)];
+
+    if (gameState.monsterCurrentHP <= 0) {
+      // Monster dies
+      setTimeout(() => {
+        document.getElementById('monsterEmoji').classList.add('die');
+        setTimeout(() => {
+          gameState.monstersKilled++;
+          gameState.monstersThisLevel++;
+          if (gameState.monstersThisLevel >= MONSTERS_PER_LEVEL) {
+            gameState.level++;
+            gameState.monstersThisLevel = 0;
+            showLevelUp();
+          } else {
+            gameState.blocked = false;
+            spawnMonster();
+          }
+          updateGameUI();
+        }, 700);
+      }, 300);
+      return;
+    }
+  } else {
+    // Wrong
+    gameState.lives--;
+    gameState.wrongCount++;
+    showPopup(`-1 ❤️`, 'negative');
+
+    const phrases = T[currentLang].wrongPhrases;
+    document.getElementById('heroSpeech').textContent =
+      phrases[Math.floor(Math.random() * phrases.length)];
+
+    // Highlight correct answer
+    document.querySelectorAll('.ans-btn').forEach(b => {
+      if (parseInt(b.textContent) === answer) {
+        b.style.border = '2px solid var(--green)';
+        b.style.color = 'var(--green)';
+      }
+    });
+
+    updateGameUI();
+
+    if (gameState.lives <= 0) {
+      setTimeout(() => endGame(), 1000);
+      return;
+    }
+  }
+
+  // Re-enable after delay
+  setTimeout(() => {
+    gameState.blocked = false;
+    if (isCorrect && gameState.monsterCurrentHP > 0) {
+      generateQuestion();
+    } else if (!isCorrect) {
+      generateQuestion();
+    }
+  }, 900);
+}
+
+function showLevelUp() {
+  const overlay = document.getElementById('overlay');
+  const banner = document.getElementById('levelBanner');
+  overlay.classList.remove('hide');
+  banner.classList.remove('hide');
+  banner.classList.add('show');
+  document.getElementById('levelBannerTitle').textContent = `${t('levelUpMsg')} ${gameState.level}! 🌟`;
+  document.getElementById('levelBannerMsg').textContent = `+${POINTS_CORRECT_BONUS_PER_LEVEL} bonus pts per correct answer!`;
+  spawnParticles(['🎉','⭐','🏆','✨','💫'], 15);
+}
+
+function closeLevelBanner() {
+  const overlay = document.getElementById('overlay');
+  const banner = document.getElementById('levelBanner');
+  banner.classList.remove('show');
+  overlay.classList.add('hide');
+  banner.classList.add('hide');
+  gameState.blocked = false;
+  spawnMonster();
+  updateGameUI();
+}
+
+function endGame() {
+  // Save total score to cookie
+  const oldTotal = getTotalScore();
+  const newTotal = oldTotal + gameState.score;
+  saveTotalScore(newTotal);
+  updateTitleScore();
+
+  // Show game over screen
+  document.getElementById('gameoverIcon').textContent = gameState.lives <= 0 ? '💀' : '🏆';
+  document.getElementById('gameoverTitle').textContent =
+    gameState.lives <= 0 ? t('gameoverTitleLose') : t('gameoverTitleWin');
+  document.getElementById('gameoverScore').textContent = gameState.score + ' ' + t('titlePts');
+  document.getElementById('goMonstersKilled').textContent = gameState.monstersKilled;
+  document.getElementById('goMonstersLabel').textContent = t('goMonstersLabel');
+  document.getElementById('goCorrect').textContent = gameState.correctCount;
+  document.getElementById('goCorrectLabel').textContent = t('goCorrectLabel');
+  document.getElementById('goWrong').textContent = gameState.wrongCount;
+  document.getElementById('goWrongLabel').textContent = t('goWrongLabel');
+  document.getElementById('goLevel').textContent = gameState.level;
+  document.getElementById('goLevelLabel').textContent = t('goLevelLabel');
+  document.getElementById('playerNameInput').placeholder = t('namePlaceholder');
+  document.getElementById('btnSaveScore').textContent = t('btnSaveScore');
+  document.getElementById('btnPlayAgain').textContent = t('btnPlayAgain');
+  document.getElementById('btnGoHome').textContent = t('btnGoHome');
+
+  showScreen('screen-gameover');
+}
+
+// ===================================================
+// SCORE POPUP & PARTICLES
+// ===================================================
+function showPopup(text, type) {
+  const arena = document.getElementById('battleArena');
+  const pop = document.createElement('div');
+  pop.className = 'score-popup ' + type;
+  pop.textContent = text;
+  pop.style.left = (30 + Math.random() * 40) + '%';
+  pop.style.top = '20%';
+  arena.appendChild(pop);
+  setTimeout(() => pop.remove(), 1200);
+}
+
+function spawnParticles(emojis, count) {
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (Math.random() * 80 + 10) + 'vw';
+      p.style.top = (Math.random() * 60 + 20) + 'vh';
+      p.style.animationDelay = (Math.random() * 0.3) + 's';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1800);
+    }, i * 80);
+  }
+}
+
+// ===================================================
+// LEADERBOARD (localStorage)
+// ===================================================
+function getLeaderboard() {
+  try {
+    return JSON.parse(localStorage.getItem('dnc_leaderboard') || '[]');
+  } catch { return []; }
+}
+
+function saveLeaderboard(lb) {
+  localStorage.setItem('dnc_leaderboard', JSON.stringify(lb));
+}
+
+function getTotalScore() {
+  return parseInt(localStorage.getItem('dnc_total_score') || '0');
+}
+
+function saveTotalScore(score) {
+  localStorage.setItem('dnc_total_score', score);
+}
+
+function updateTitleScore() {
+  const total = getTotalScore();
+  const el = document.getElementById('titleTotalScore');
+  if (el) el.textContent = total;
+}
+
+function saveScore() {
+  const name = document.getElementById('playerNameInput').value.trim() || 'Anonymous';
+  const lb = getLeaderboard();
+  lb.push({
+    name,
+    score: gameState.score,
+    level: gameState.level,
+    difficulty: gameState.difficulty,
+    date: new Date().toLocaleDateString()
+  });
+  lb.sort((a, b) => b.score - a.score);
+  saveLeaderboard(lb.slice(0, 10));
+  showScreen('screen-leaderboard');
+}
+
+function renderLeaderboard() {
+  const lb = getLeaderboard();
+  const list = document.getElementById('lbList');
+  list.innerHTML = '';
+
+  if (lb.length === 0) {
+    list.innerHTML = `<div class="lb-empty">${t('lbEmpty')}</div>`;
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const classes = ['first', 'second', 'third'];
+
+  lb.forEach((entry, i) => {
+    const li = document.createElement('li');
+    li.className = 'lb-item ' + (classes[i] || '');
+    li.innerHTML = `
+      <div class="lb-rank">${medals[i] || (i+1)}</div>
+      <div class="lb-name">${escapeHtml(entry.name)}</div>
+      <div>
+        <span class="diff-badge ${entry.difficulty || 'easy'}" style="margin-right:8px;">
+          ${T[currentLang].diffBadges[entry.difficulty] || ''}
+        </span>
+      </div>
+      <div class="lb-score">${entry.score}</div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function clearLeaderboard() {
+  if (confirm(t('confirmClear'))) {
+    localStorage.removeItem('dnc_leaderboard');
+    renderLeaderboard();
+  }
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ===================================================
+// UTILITIES
+// ===================================================
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ===================================================
+// INIT
+// ===================================================
+applyTranslations();
+updateTitleScore();
+updateDemo();
+</script>
+</body>
+</html>
